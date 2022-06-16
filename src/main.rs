@@ -1,12 +1,10 @@
-use std::fmt::format;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::fs::OpenOptions;
 use std::ops::{Add, Sub};
-use chrono::{Datelike, DateTime, Duration, NaiveDateTime, Timelike, Utc};
-use chrono::format::StrftimeItems;
+use chrono::{Datelike, DateTime, Duration, NaiveDateTime, Utc};
 
 const FORMAT_STRING: &str = "%Y%m%dT%H%M%SZ";
 
@@ -36,7 +34,7 @@ fn main() {
     println!("Read {} and the next line is {}", &since, &balance_string);
 
     balance = balance.add(Duration::seconds(balance_string.trim().parse::<i64>().unwrap()));
-    let since_date = DateTime::parse_from_rfc3339(&since.trim()).expect("Couldn't parse since");
+    let since_date = DateTime::parse_from_rfc3339(since.trim()).expect("Couldn't parse since");
     let formatted_since = &since_date.format(FORMAT_STRING);
     let output = Command::new("timew").args(
         [
@@ -54,11 +52,11 @@ fn main() {
             continue;
         };
         let start_date = NaiveDateTime::parse_from_str(&entry.start, FORMAT_STRING).expect("Failed to parse start_date");
-        let end_date = NaiveDateTime::parse_from_str(&entry.end.as_ref().unwrap(), FORMAT_STRING).expect("Failed to parse end_date");
+        let end_date = NaiveDateTime::parse_from_str(entry.end.as_ref().unwrap(), FORMAT_STRING).expect("Failed to parse end_date");
         let work_time = end_date.signed_duration_since(start_date);
         balance = balance.sub(work_time);
     }
-    if &since_date.day() < &today.day() && &since_date.month() <= &today.month() {
+    if since_date.day() < today.day() && since_date.month() <= today.month() {
         balance = balance.add(Duration::hours(8));
         println!("New day, adding 8hrs of work to balance, current balance is: {balance}");
     }
