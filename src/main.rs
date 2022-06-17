@@ -29,8 +29,15 @@ fn main() {
         Ok(file) => file,
     };
     let mut file_buffer = BufReader::new(&file);
-    let _ = file_buffer.read_line(&mut since).expect("Unable to read_line to file");
+    let len = file_buffer.read_line(&mut since).expect("Unable to read_line to file");
     let _ = file_buffer.read_line(&mut balance_string).expect("Cannot read the second line");
+    if len == 0 {
+        match file.write_all(format!("{}\n{}", last_used.sub(Duration::days(1)).to_rfc3339(), balance.num_seconds()).as_bytes()) {
+            Err(error) => panic!("Couldn't write to {}: {}", &data_path.display(), error),
+            Ok(_) => println!("Successfully updated work hours! New balance should be {}", &balance),
+        };
+        return ()
+    }
     println!("Read {} and the next line is {}", &since, &balance_string);
 
     balance = balance.add(Duration::seconds(balance_string.trim().parse::<i64>().unwrap()));
