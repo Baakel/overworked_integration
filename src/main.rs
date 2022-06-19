@@ -1,3 +1,4 @@
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::io::prelude::*;
@@ -9,6 +10,29 @@ use chrono::{Datelike, DateTime, Duration, NaiveDateTime, Utc};
 const FORMAT_STRING: &str = "%Y%m%dT%H%M%SZ";
 
 fn main() {
+    let args = Cli::parse();
+    match args.option.as_str() {
+        "balance" => get_current_balance(),
+        "update" => update_balance(),
+        _ => println!("Invalid argument please use 'balance' or 'update'"),
+    }
+}
+
+fn get_current_balance() {
+    let output = Command::new("timew").args(["summary", "day"]).output().expect("Cannot run command");
+    let output_string = String::from_utf8(output.stdout).expect("Couldn't read the bytes");
+    let string_vector: Vec<&str> = output_string.split('\n').collect();
+    let running_time: Vec<&str> = string_vector[string_vector.len() - 5].split(' ').collect();
+    let running_time_vector: Vec<&str> = running_time[running_time.len() - 1].split(':').collect();
+    let running_for = Duration::seconds(
+        running_time_vector[0].parse::<i64>().unwrap() * 3600 +
+        running_time_vector[1].parse::<i64>().unwrap() * 60 +
+        running_time_vector[2].parse::<i64>().unwrap()
+    );
+    println!("H:{} M:{}", running_for.num_hours(), running_for.num_minutes() - running_for.num_hours() * 60);
+}
+
+fn update_balance() {
     let mut since = String::new();
     let data_path = std::path::Path::new("/home/baakel/.local/share/overworked/data");
     let data_path_prefix = data_path.parent().unwrap();
@@ -36,7 +60,7 @@ fn main() {
             Err(error) => panic!("Couldn't write to {}: {}", &data_path.display(), error),
             Ok(_) => println!("Successfully updated work hours! New balance should be {}", &balance),
         };
-        return ()
+        return
     }
     println!("Read {} and the next line is {}", &since, &balance_string);
 
@@ -87,4 +111,9 @@ struct TimeEntry {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct TimeEntriesVector {
     entries: Vec<TimeEntry>,
+}
+
+#[derive(Parser, Debug)]
+struct Cli {
+    option: String,
 }
