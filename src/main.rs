@@ -23,13 +23,22 @@ fn get_current_balance() {
     let output_string = String::from_utf8(output.stdout).expect("Couldn't read the bytes");
     let string_vector: Vec<&str> = output_string.split('\n').collect();
     let running_time: Vec<&str> = string_vector[string_vector.len() - 5].split(' ').collect();
-    let running_time_vector: Vec<&str> = running_time[running_time.len() - 1].split(':').collect();
+    let running_time_vector: Vec<&str> = running_time[running_time.len() - 2].split(':').collect();
     let running_for = Duration::seconds(
         running_time_vector[0].parse::<i64>().unwrap() * 3600 +
         running_time_vector[1].parse::<i64>().unwrap() * 60 +
         running_time_vector[2].parse::<i64>().unwrap()
     );
-    println!("H:{} M:{}", running_for.num_hours(), running_for.num_minutes() - running_for.num_hours() * 60);
+    let mut discardable_string = String::new();
+    let mut curr_balance = String::new();
+    let data_path = std::path::Path::new("/home/baakel/.local/share/overworked/data");
+    let file = std::fs::File::open(&data_path).expect("Couldn't open data file");
+    let mut file_buffer = BufReader::new(&file);
+    let _len = file_buffer.read_line(&mut discardable_string).expect("Cannot read first line");
+    let _ = file_buffer.read_line(&mut curr_balance).expect("Cannot read second line");
+    let current_debt = Duration::seconds(curr_balance.trim().parse::<i64>().unwrap());
+    let current_state = current_debt.sub(running_for);
+    println!("H:{} M:{}", current_state.num_hours(), current_state.num_minutes() - current_state.num_hours() * 60);
 }
 
 fn update_balance() {
