@@ -38,6 +38,10 @@ fn get_current_balance() {
     let _ = file_buffer.read_line(&mut curr_balance).expect("Cannot read second line");
     let current_debt = Duration::seconds(curr_balance.trim().parse::<i64>().unwrap());
     let current_state = current_debt.sub(running_for);
+    if running_time[running_time.len() - 3] != "-" {
+        println!("No timer running");
+        return
+    }
     println!("H:{} M:{}", current_state.num_hours(), current_state.num_minutes() - current_state.num_hours() * 60);
 }
 
