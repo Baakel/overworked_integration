@@ -1,5 +1,6 @@
 use clap::Parser;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::process::Command;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -22,6 +23,10 @@ fn get_current_balance() {
     let output = Command::new("timew").args(["summary", "day"]).output().expect("Cannot run command");
     let output_string = String::from_utf8(output.stdout).expect("Couldn't read the bytes");
     let string_vector: Vec<&str> = output_string.split('\n').collect();
+    if string_vector.len() < 3 {
+        println!("No time data found");
+        return
+    };
     let running_time: Vec<&str> = string_vector[string_vector.len() - 5].split(' ').collect();
     let running_time_vector: Vec<&str> = running_time[running_time.len() - 2].split(':').collect();
     let running_for = Duration::seconds(
@@ -31,7 +36,7 @@ fn get_current_balance() {
     );
     let mut discardable_string = String::new();
     let mut curr_balance = String::new();
-    let data_path = std::path::Path::new("/home/baakel/.local/share/overworked/data");
+    let data_path = Path::new("/home/baakel/.local/share/overworked/data");
     let file = std::fs::File::open(&data_path).expect("Couldn't open data file");
     let mut file_buffer = BufReader::new(&file);
     let _len = file_buffer.read_line(&mut discardable_string).expect("Cannot read first line");
@@ -47,7 +52,7 @@ fn get_current_balance() {
 
 fn update_balance() {
     let mut since = String::new();
-    let data_path = std::path::Path::new("/home/baakel/.local/share/overworked/data");
+    let data_path = Path::new("/home/baakel/.local/share/overworked/data");
     let data_path_prefix = data_path.parent().unwrap();
     if !&data_path_prefix.is_dir() {
         std::fs::create_dir_all(&data_path_prefix).expect("Couldn't create the dirs");
@@ -55,19 +60,43 @@ fn update_balance() {
     let today = Utc::today();
     let mut balance_string = String::new();
     let mut balance = Duration::zero();
-
     let last_used = Utc::now();
-    let mut file = match OpenOptions::new()
+
+    if !data_path.exists() {
+        let mut file = match OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&data_path) {
+            Err(error) => panic!("Couldn't create {}: {}", &data_path.display(), error),
+            Ok(file) => file,
+        };
+        match file.write_all(format!("{}\n{}", &last_used.sub(Duration::days(1)).to_rfc3339(), &balance.num_seconds()).as_bytes()) {
+            Err(error) => panic!("Couldn't write to {}: {}", &data_path.display(), error),
+            Ok(_) => println!("Successfully created a new data file"),
+        }
+    }
+
+    // let mut file = match OpenOptions::new()
+    let file = match OpenOptions::new()
         .read(true)
-        .write(true)
-        .create(true)
+        // .write(true)
+        // .create(true)
         .open(&data_path) {
-        Err(error) => panic!("Couldn't create {}: {}", &data_path.display(), error),
+        Err(error) => panic!("Couldn't open {}: {}", &data_path.display(), error),
         Ok(file) => file,
     };
     let mut file_buffer = BufReader::new(&file);
     let len = file_buffer.read_line(&mut since).expect("Unable to read_line to file");
     let _ = file_buffer.read_line(&mut balance_string).expect("Cannot read the second line");
+    drop(file);
+
+    let mut file = match OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&data_path) {
+        Err(error) => panic!("couldn't open {} for writing: {}", &data_path.display(), error),
+        Ok(file) => file,
+    };
     if len == 0 {
         match file.write_all(format!("{}\n{}", last_used.sub(Duration::days(1)).to_rfc3339(), balance.num_seconds()).as_bytes()) {
             Err(error) => panic!("Couldn't write to {}: {}", &data_path.display(), error),
@@ -106,7 +135,7 @@ fn update_balance() {
     }
     // Needed since the file_buffer moves the cursor position on the file, so when writing it always
     // starts at the end of the first read line and thus it doesn't overwrite contents but appends instead
-    file_buffer.rewind().expect("Couldn't rewind the buffer");
+    // file_buffer.rewind().expect("Couldn't rewind the buffer");
     match file.write_all(format!("{}\n{}", last_used.to_rfc3339(), balance.num_seconds()).as_bytes()) {
         Err(error) => panic!("Couldn't write to {}: {}", &data_path.display(), error),
         Ok(_) => println!("Successfully updated work hours! New balance should be {}", &balance),
