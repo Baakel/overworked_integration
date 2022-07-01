@@ -129,7 +129,7 @@ fn update_balance() {
         let work_time = end_date.signed_duration_since(start_date);
         balance = balance.sub(work_time);
     }
-    if since_date.day() < today.day() && since_date.month() <= today.month() {
+    if (since_date.day() < today.day() && since_date.month() <= today.month()) || (since_date.day() >= today.day() && since_date.month() < today.month()) {
         balance = balance.add(Duration::hours(8));
         println!("New day, adding 8hrs of work to balance, current balance is: {balance}");
     }
