@@ -57,7 +57,7 @@ fn update_balance() {
     if !&data_path_prefix.is_dir() {
         std::fs::create_dir_all(&data_path_prefix).expect("Couldn't create the dirs");
     }
-    let today = Utc::today();
+    let today = Utc::now();
     let mut balance_string = String::new();
     let mut balance = Duration::zero();
     let last_used = Utc::now();
@@ -129,7 +129,10 @@ fn update_balance() {
         let work_time = end_date.signed_duration_since(start_date);
         balance = balance.sub(work_time);
     }
-    if (since_date.day() < today.day() && since_date.month() <= today.month()) || (since_date.day() >= today.day() && since_date.month() < today.month()) {
+    if (since_date.day() < today.day() && since_date.month() <= today.month())
+        || (since_date.day() >= today.day() && since_date.month() < today.month())
+        || (since_date.year() < today.year())
+    {
         balance = balance.add(Duration::hours(8));
         println!("New day, adding 8hrs of work to balance, current balance is: {balance}");
     }
